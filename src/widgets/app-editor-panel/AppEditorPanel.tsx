@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Blend, Box, Move3D } from "lucide-react";
-import { EditorPanelSlider } from "@/features/editor-panel";
+import { Blend, Box, GripHorizontal, Move3D } from "lucide-react";
+import { motion, useDragControls } from "motion/react";
+import { EditorPanelSlider, useSnapPanelPosition } from "@/features/editor-panel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type EditorControl = {
@@ -56,6 +57,8 @@ const initialValues = Object.fromEntries(
 
 export function AppEditorPanel() {
   const [values, setValues] = useState(initialValues);
+  const dragControls = useDragControls();
+  const { panelRef, snapToBounds, x, y } = useSnapPanelPosition();
 
   function updateValue(label: string, value: number) {
     setValues((currentValues) => ({
@@ -65,12 +68,27 @@ export function AppEditorPanel() {
   }
 
   return (
-    <aside
+    <motion.aside
       aria-label="Editor controls"
-      className="absolute inset-x-3 top-3 z-20 flex max-h-[calc(100svh-24px)] overflow-hidden rounded-[22px] bg-card/80 text-card-foreground backdrop-blur-md sm:left-auto sm:right-4 sm:top-4 sm:max-h-[calc(100svh-32px)] sm:w-[min(340px,calc(100vw-32px))] sm:rounded-[24px]"
+      className="fixed left-0 top-0 z-20 flex max-h-[calc(100svh-24px)] w-[calc(100vw-24px)] overflow-hidden rounded-[22px] bg-card/80 text-card-foreground backdrop-blur-md sm:max-h-[calc(100svh-32px)] sm:w-[min(340px,calc(100vw-32px))] sm:rounded-[24px]"
+      drag
+      dragControls={dragControls}
+      dragElastic={0.08}
+      dragListener={false}
+      dragMomentum={false}
+      onDragEnd={(_, info) => snapToBounds(info)}
+      ref={panelRef}
+      style={{ x, y }}
     >
       <ScrollArea className="h-full w-full">
         <div className="flex flex-col gap-3 p-3.5">
+          <div
+            className="flex min-h-9 cursor-grab touch-none select-none items-center justify-between rounded-[12px] px-2 text-muted-foreground active:cursor-grabbing"
+            onPointerDown={(event) => dragControls.start(event)}
+          >
+            <span className="text-[13px] font-medium leading-none">Editor</span>
+            <GripHorizontal className="opacity-50 transition-opacity duration-150 ease-out hover:opacity-100" />
+          </div>
           {sections.map(({ title, Icon, controls }) => (
             <section className="flex w-full flex-col gap-2" key={title}>
               <div className="flex min-h-8 items-center gap-1.5 text-muted-foreground">
@@ -91,6 +109,6 @@ export function AppEditorPanel() {
           ))}
         </div>
       </ScrollArea>
-    </aside>
+    </motion.aside>
   );
 }
