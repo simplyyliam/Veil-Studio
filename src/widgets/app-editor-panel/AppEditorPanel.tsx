@@ -1,71 +1,37 @@
-import { useState } from "react";
-import { Blend, Box, GripHorizontal, Move3D } from "lucide-react";
+import { Blend, Box, ChevronDown, GripHorizontal, Move3D } from "lucide-react";
 import { motion, useDragControls } from "motion/react";
 import { EditorPanelSlider, useSnapPanelPosition } from "@/features/editor-panel";
+import {
+  shaderControlSections,
+  shaderPresets,
+  useShaderEditorStore,
+  type ShaderControlSectionId,
+  type ShaderPresetId,
+} from "@/features/shader-editor";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-type EditorControl = {
-  label: string;
-  defaultValue: number;
+const sectionIcons: Record<ShaderControlSectionId, typeof Box> = {
+  form: Box,
+  material: Blend,
+  motion: Move3D,
 };
-
-type EditorSection = {
-  title: string;
-  Icon: typeof Box;
-  controls: EditorControl[];
-};
-
-const sections: EditorSection[] = [
-  {
-    title: "Form",
-    Icon: Box,
-    controls: [
-      { label: "Scale", defaultValue: 5 },
-      { label: "Stretch", defaultValue: 5 },
-      { label: "Warp", defaultValue: 5 },
-      { label: "Detail", defaultValue: 5 },
-      { label: "Softness", defaultValue: 5 },
-    ],
-  },
-  {
-    title: "Motion",
-    Icon: Move3D,
-    controls: [
-      { label: "Speed", defaultValue: 5 },
-      { label: "Motion Amount", defaultValue: 5 },
-      { label: "Flow", defaultValue: 5 },
-      { label: "Drift", defaultValue: 5 },
-    ],
-  },
-  {
-    title: "Material",
-    Icon: Blend,
-    controls: [
-      { label: "Opacity", defaultValue: 5 },
-      { label: "Grain", defaultValue: 5 },
-      { label: "Glow", defaultValue: 5 },
-      { label: "Blur", defaultValue: 5 },
-    ],
-  },
-];
-
-const initialValues = Object.fromEntries(
-  sections.flatMap((section) =>
-    section.controls.map((control) => [control.label, control.defaultValue]),
-  ),
-) as Record<string, number>;
 
 export function AppEditorPanel() {
-  const [values, setValues] = useState(initialValues);
+  const controls = useShaderEditorStore((state) => state.controls);
+  const preset = useShaderEditorStore((state) => state.preset);
+  const setControl = useShaderEditorStore((state) => state.setControl);
+  const setPreset = useShaderEditorStore((state) => state.setPreset);
   const dragControls = useDragControls();
   const { panelRef, snapToBounds, x, y } = useSnapPanelPosition();
-
-  function updateValue(label: string, value: number) {
-    setValues((currentValues) => ({
-      ...currentValues,
-      [label]: value,
-    }));
-  }
+  const activePreset = shaderPresets[preset];
 
   return (
     <motion.aside
@@ -89,24 +55,61 @@ export function AppEditorPanel() {
             <span className="text-[13px] font-medium leading-none">Editor</span>
             <GripHorizontal className="opacity-50 transition-opacity duration-150 ease-out hover:opacity-100" />
           </div>
-          {sections.map(({ title, Icon, controls }) => (
-            <section className="flex w-full flex-col gap-2" key={title}>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  className="h-9 w-full justify-between rounded-xl px-3"
+                  variant="secondary"
+                >
+                  <span>{activePreset.label}</span>
+                  <ChevronDown data-icon="inline-end" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="start">
+              <DropdownMenuRadioGroup
+                onValueChange={(value) =>
+                  setPreset(value as ShaderPresetId)
+                }
+                value={preset}
+              >
+                {Object.values(shaderPresets).map((presetOption) => (
+                  <DropdownMenuRadioItem
+                    key={presetOption.id}
+                    value={presetOption.id}
+                  >
+                    {presetOption.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {shaderControlSections.map(({ id, title, controls: sectionControls }) => {
+            const Icon = sectionIcons[id];
+
+            return (
+            <section className="flex w-full flex-col gap-2" key={id}>
               <div className="flex min-h-8 items-center gap-1.5 text-muted-foreground">
                 <Icon className="size-3.5" strokeWidth={1.8} />
                 <h2 className="text-[13px] font-medium leading-none">{title}</h2>
               </div>
               <div className="flex flex-col gap-2.5">
-                {controls.map((control) => (
+                {sectionControls.map((control) => (
                   <EditorPanelSlider
-                    key={control.label}
+                    key={control.key}
                     label={control.label}
-                    onChange={(value) => updateValue(control.label, value)}
-                    value={values[control.label]}
+                    max={control.max}
+                    min={control.min}
+                    onChange={(value) => setControl(control.key, value)}
+                    step={control.step}
+                    value={controls[control.key]}
                   />
                 ))}
               </div>
             </section>
-          ))}
+            );
+          })}
         </div>
       </ScrollArea>
     </motion.aside>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { animate, useMotionValue, type PanInfo } from "motion/react";
 
 type SnapPanelOptions = {
@@ -54,6 +54,19 @@ export function useSnapPanelPosition(options: SnapPanelOptions = {}) {
   const panelRef = useRef<HTMLElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
+  const {
+    edgePadding = 16,
+    mobileBreakpoint = 640,
+    mobileEdgePadding = 12,
+  } = options;
+  const resolvedOptions = useMemo(
+    () => ({
+      edgePadding,
+      mobileBreakpoint,
+      mobileEdgePadding,
+    }),
+    [edgePadding, mobileBreakpoint, mobileEdgePadding],
+  );
 
   const snapToBounds = useCallback(
     (info?: PanInfo) => {
@@ -63,7 +76,7 @@ export function useSnapPanelPosition(options: SnapPanelOptions = {}) {
         return;
       }
 
-      const { maxX, maxY, padding } = getBounds(panel, options);
+      const { maxX, maxY, padding } = getBounds(panel, resolvedOptions);
       const projectedX = projectPosition(x.get(), info?.velocity.x ?? 0);
       const projectedY = projectPosition(y.get(), info?.velocity.y ?? 0);
       const panelCenterX = projectedX + panel.offsetWidth / 2;
@@ -83,7 +96,7 @@ export function useSnapPanelPosition(options: SnapPanelOptions = {}) {
       animateMotionValue(x, nextX, info?.velocity.x);
       animateMotionValue(y, nextY, info?.velocity.y);
     },
-    [options, x, y],
+    [resolvedOptions, x, y],
   );
 
   useEffect(() => {
@@ -94,7 +107,7 @@ export function useSnapPanelPosition(options: SnapPanelOptions = {}) {
     }
 
     const setInitialPosition = () => {
-      const { maxX, padding } = getBounds(panel, options);
+      const { maxX, padding } = getBounds(panel, resolvedOptions);
 
       x.set(maxX);
       y.set(padding);
@@ -112,7 +125,12 @@ export function useSnapPanelPosition(options: SnapPanelOptions = {}) {
       resizeObserver.disconnect();
       window.removeEventListener("resize", handleResize);
     };
-  }, [options, snapToBounds, x, y]);
+  }, [
+    resolvedOptions,
+    snapToBounds,
+    x,
+    y,
+  ]);
 
   return {
     panelRef,
