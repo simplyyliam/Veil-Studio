@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react';
 
 interface IconButtonProps {
