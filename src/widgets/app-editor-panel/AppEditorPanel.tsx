@@ -80,7 +80,7 @@ export function AppEditorPanel() {
       ref={panelRef}
       style={{ x, y }}
     >
-      <ScrollArea className="h-full w-full">
+      <ScrollArea className="max-h-[inherit] w-full">
         <div className="flex flex-col gap-3 p-3.5">
           <div
             className="flex min-h-9 cursor-grab touch-none select-none items-center justify-between rounded-[12px] px-2 text-muted-foreground active:cursor-grabbing"
