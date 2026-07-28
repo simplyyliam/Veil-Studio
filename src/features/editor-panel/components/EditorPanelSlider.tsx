@@ -7,6 +7,7 @@ type EditorPanelSliderProps = {
   min?: number;
   max?: number;
   step?: number;
+  unit?: string;
   onChange: (value: number) => void;
   className?: string;
 };
@@ -17,6 +18,7 @@ export function EditorPanelSlider({
   min = 0,
   max = 10,
   step = 1,
+  unit,
   onChange,
   className,
 }: EditorPanelSliderProps) {
@@ -44,6 +46,7 @@ export function EditorPanelSlider({
         </span>
         <span className="font-mono text-[11px] leading-none text-muted-foreground tabular-nums">
           {clampedValue}
+          {unit}
         </span>
       </span>
       <input

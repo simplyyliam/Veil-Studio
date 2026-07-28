@@ -4,6 +4,9 @@ export const shaderControlKeys = [
   "warp",
   "detail",
   "softness",
+  "rotationX",
+  "rotationY",
+  "rotationZ",
   "speed",
   "motionAmount",
   "flow",
@@ -16,8 +19,11 @@ export const shaderControlKeys = [
 
 export type ShaderControlKey = (typeof shaderControlKeys)[number];
 export type ShaderControls = Record<ShaderControlKey, number>;
-export type ShaderPresetId = "coil" | "saturn";
-export type ShaderControlSectionId = "form" | "motion" | "material";
+export type ShaderControlSectionId =
+  | "form"
+  | "rotation"
+  | "motion"
+  | "material";
 
 export type ShaderControlDefinition = {
   key: ShaderControlKey;
@@ -25,16 +31,11 @@ export type ShaderControlDefinition = {
   min: number;
   max: number;
   step: number;
+  unit?: string;
 };
 
 export type ShaderControlSection = {
   id: ShaderControlSectionId;
   title: string;
   controls: ShaderControlDefinition[];
-};
-
-export type ShaderPresetDefinition = {
-  id: ShaderPresetId;
-  label: string;
-  defaults: ShaderControls;
 };

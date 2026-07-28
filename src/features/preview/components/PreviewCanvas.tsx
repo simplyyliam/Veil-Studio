@@ -15,11 +15,7 @@ export function PreviewCanvas() {
     }
 
     const initialState = useShaderEditorStore.getState();
-    const renderer = new ShaderRenderer(
-      canvas,
-      initialState.preset,
-      initialState.controls,
-    );
+    const renderer = new ShaderRenderer(canvas, initialState.controls);
     const resizeObserver = new ResizeObserver(([entry]) => {
       const { height, width } = entry.contentRect;
       const pixelRatio = Math.min(window.devicePixelRatio, 1.5);
@@ -27,7 +23,7 @@ export function PreviewCanvas() {
       renderer.resize(width, height, pixelRatio);
     });
     const unsubscribe = useShaderEditorStore.subscribe((state) => {
-      renderer.setPreset(state.preset, state.controls);
+      renderer.setControls(state.controls);
     });
     const startedAt = performance.now();
     let animationFrame = 0;

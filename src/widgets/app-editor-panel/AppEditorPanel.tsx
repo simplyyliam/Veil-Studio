@@ -1,37 +1,25 @@
-import { Blend, Box, ChevronDown, GripHorizontal, Move3D } from "lucide-react";
+import { Blend, Box, GripHorizontal, Move3D, Rotate3D } from "lucide-react";
 import { motion, useDragControls } from "motion/react";
 import { EditorPanelSlider, useSnapPanelPosition } from "@/features/editor-panel";
 import {
   shaderControlSections,
-  shaderPresets,
   useShaderEditorStore,
   type ShaderControlSectionId,
-  type ShaderPresetId,
 } from "@/features/shader-editor";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const sectionIcons: Record<ShaderControlSectionId, typeof Box> = {
   form: Box,
   material: Blend,
   motion: Move3D,
+  rotation: Rotate3D,
 };
 
 export function AppEditorPanel() {
   const controls = useShaderEditorStore((state) => state.controls);
-  const preset = useShaderEditorStore((state) => state.preset);
   const setControl = useShaderEditorStore((state) => state.setControl);
-  const setPreset = useShaderEditorStore((state) => state.setPreset);
   const dragControls = useDragControls();
   const { panelRef, snapToBounds, x, y } = useSnapPanelPosition();
-  const activePreset = shaderPresets[preset];
 
   return (
     <motion.aside
@@ -55,36 +43,6 @@ export function AppEditorPanel() {
             <span className="text-[13px] font-medium leading-none">Editor</span>
             <GripHorizontal className="opacity-50 transition-opacity duration-150 ease-out hover:opacity-100" />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  className="h-9 w-full justify-between rounded-xl px-3"
-                  variant="secondary"
-                >
-                  <span>{activePreset.label}</span>
-                  <ChevronDown data-icon="inline-end" />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="start">
-              <DropdownMenuRadioGroup
-                onValueChange={(value) =>
-                  setPreset(value as ShaderPresetId)
-                }
-                value={preset}
-              >
-                {Object.values(shaderPresets).map((presetOption) => (
-                  <DropdownMenuRadioItem
-                    key={presetOption.id}
-                    value={presetOption.id}
-                  >
-                    {presetOption.label}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
           {shaderControlSections.map(({ id, title, controls: sectionControls }) => {
             const Icon = sectionIcons[id];
 
@@ -103,6 +61,7 @@ export function AppEditorPanel() {
                     min={control.min}
                     onChange={(value) => setControl(control.key, value)}
                     step={control.step}
+                    unit={control.unit}
                     value={controls[control.key]}
                   />
                 ))}

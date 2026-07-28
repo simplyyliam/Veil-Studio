@@ -1,28 +1,22 @@
 import { create } from "zustand";
-import { shaderPresets } from "./presets";
+import { shaderDefaults } from "./presets";
 import type {
   ShaderControlKey,
   ShaderControls,
-  ShaderPresetId,
 } from "./types";
 
 type ShaderEditorState = {
-  preset: ShaderPresetId;
   controls: ShaderControls;
   setControl: (key: ShaderControlKey, value: number) => void;
-  setPreset: (preset: ShaderPresetId) => void;
-  resetPreset: () => void;
+  reset: () => void;
 };
 
-const initialPreset: ShaderPresetId = "coil";
-
-function copyDefaults(preset: ShaderPresetId) {
-  return { ...shaderPresets[preset].defaults };
+function copyDefaults() {
+  return { ...shaderDefaults };
 }
 
 export const useShaderEditorStore = create<ShaderEditorState>((set) => ({
-  preset: initialPreset,
-  controls: copyDefaults(initialPreset),
+  controls: copyDefaults(),
   setControl: (key, value) => {
     set((state) => ({
       controls: {
@@ -31,24 +25,17 @@ export const useShaderEditorStore = create<ShaderEditorState>((set) => ({
       },
     }));
   },
-  setPreset: (preset) => {
+  reset: () => {
     set({
-      preset,
-      controls: copyDefaults(preset),
+      controls: copyDefaults(),
     });
-  },
-  resetPreset: () => {
-    set((state) => ({
-      controls: copyDefaults(state.preset),
-    }));
   },
 }));
 
 export function getShaderEditorSnapshot() {
-  const { controls, preset } = useShaderEditorStore.getState();
+  const { controls } = useShaderEditorStore.getState();
 
   return {
     controls: { ...controls },
-    preset,
   };
 }

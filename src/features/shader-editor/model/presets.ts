@@ -1,16 +1,17 @@
 import type {
   ShaderControlSection,
   ShaderControls,
-  ShaderPresetDefinition,
-  ShaderPresetId,
 } from "./types";
 
-const sharedDefaults: ShaderControls = {
+export const shaderDefaults: ShaderControls = {
   scale: 5,
   stretch: 5,
   warp: 3,
   detail: 5,
   softness: 5,
+  rotationX: 0,
+  rotationY: 0,
+  rotationZ: -14,
   speed: 2,
   motionAmount: 4,
   flow: 5,
@@ -19,32 +20,6 @@ const sharedDefaults: ShaderControls = {
   grain: 2,
   glow: 4,
   blur: 1,
-};
-
-export const shaderPresets: Record<ShaderPresetId, ShaderPresetDefinition> = {
-  coil: {
-    id: "coil",
-    label: "Coil",
-    defaults: sharedDefaults,
-  },
-  saturn: {
-    id: "saturn",
-    label: "Saturn",
-    defaults: {
-      ...sharedDefaults,
-      scale: 4,
-      stretch: 4,
-      warp: 2,
-      detail: 7,
-      softness: 3,
-      speed: 1,
-      motionAmount: 3,
-      flow: 7,
-      drift: 3,
-      grain: 4,
-      glow: 2,
-    },
-  },
 };
 
 export const shaderControlSections: ShaderControlSection[] = [
@@ -57,6 +32,36 @@ export const shaderControlSections: ShaderControlSection[] = [
       { key: "warp", label: "Warp", min: 0, max: 10, step: 1 },
       { key: "detail", label: "Detail", min: 0, max: 10, step: 1 },
       { key: "softness", label: "Softness", min: 0, max: 10, step: 1 },
+    ],
+  },
+  {
+    id: "rotation",
+    title: "Rotation",
+    controls: [
+      {
+        key: "rotationX",
+        label: "Rotate X",
+        min: -90,
+        max: 90,
+        step: 1,
+        unit: "°",
+      },
+      {
+        key: "rotationY",
+        label: "Rotate Y",
+        min: -180,
+        max: 180,
+        step: 1,
+        unit: "°",
+      },
+      {
+        key: "rotationZ",
+        label: "Rotate Z",
+        min: -180,
+        max: 180,
+        step: 1,
+        unit: "°",
+      },
     ],
   },
   {

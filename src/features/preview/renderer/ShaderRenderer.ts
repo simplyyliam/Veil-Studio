@@ -1,283 +1,206 @@
 import {
+  BufferAttribute,
+  BufferGeometry,
   Color,
-  Curve,
   DoubleSide,
-  Group,
   Mesh,
-  PerspectiveCamera,
-  RingGeometry,
+  OrthographicCamera,
   Scene,
   ShaderMaterial,
-  SphereGeometry,
-  TubeGeometry,
-  Vector3,
+  Vector2,
   WebGLRenderer,
   type IUniform,
-  type Material,
-  type Object3D,
 } from "three";
-import type {
-  ShaderControls,
-  ShaderPresetId,
-} from "@/features/shader-editor";
+import type { ShaderControls } from "@/features/shader-editor";
 import {
-  formFragmentShader,
-  formVertexShader,
-  ringFragmentShader,
-  ringVertexShader,
+  ribbonFragmentShader,
+  ribbonVertexShader,
 } from "./shaders";
 
 type ShaderUniforms = Record<string, IUniform>;
-
-class HelixCurve extends Curve<Vector3> {
-  private readonly turns: number;
-  private readonly height: number;
-
-  constructor(turns: number, height: number) {
-    super();
-    this.turns = turns;
-    this.height = height;
-  }
-
-  override getPoint(t: number, target = new Vector3()) {
-    const angle = t * Math.PI * 2 * this.turns;
-    const radius = 1.05 + Math.sin(t * Math.PI) * 0.12;
-
-    return target.set(
-      Math.cos(angle) * radius,
-      (t - 0.5) * this.height,
-      Math.sin(angle) * radius,
-    );
-  }
-}
 
 function normalize(value: number) {
   return Math.min(1, Math.max(0, value / 10));
 }
 
-function disposeObject(object: Object3D) {
-  object.traverse((child) => {
-    if (!(child instanceof Mesh)) {
-      return;
-    }
+function createRibbonGeometry(segments = 512) {
+  const geometry = new BufferGeometry();
+  const positions: number[] = [];
+  const tValues: number[] = [];
+  const sideValues: number[] = [];
+  const alongValues: number[] = [];
+  const indices: number[] = [];
 
-    child.geometry.dispose();
+  for (let index = 0; index <= segments; index += 1) {
+    const vertexIndex = index * 2;
+    const t = index / segments;
 
-    if (Array.isArray(child.material)) {
-      child.material.forEach((material: Material) => material.dispose());
-    } else {
-      child.material.dispose();
+    positions.push(0, 0, 0, 0, 0, 0);
+    tValues.push(t, t);
+    sideValues.push(-1, 1);
+    alongValues.push(0, 0);
+
+    if (index < segments) {
+      const nextVertexIndex = vertexIndex + 2;
+
+      indices.push(
+        vertexIndex,
+        nextVertexIndex,
+        vertexIndex + 1,
+        nextVertexIndex,
+        nextVertexIndex + 1,
+        vertexIndex + 1,
+      );
     }
-  });
+  }
+
+  const capSegments = 36;
+
+  for (const cap of [{ t: 0, direction: -1 }, { t: 1, direction: 1 }]) {
+    const centerIndex = tValues.length;
+
+    positions.push(0, 0, 0);
+    tValues.push(cap.t);
+    sideValues.push(0);
+    alongValues.push(0);
+
+    for (let index = 0; index <= capSegments; index += 1) {
+      const angle = -Math.PI / 2 + (index / capSegments) * Math.PI;
+
+      positions.push(0, 0, 0);
+      tValues.push(cap.t);
+      sideValues.push(Math.sin(angle));
+      alongValues.push(Math.cos(angle) * cap.direction);
+
+      if (index < capSegments) {
+        indices.push(centerIndex, centerIndex + index + 1, centerIndex + index + 2);
+      }
+    }
+  }
+
+  geometry.setAttribute(
+    "position",
+    new BufferAttribute(new Float32Array(positions), 3),
+  );
+  geometry.setAttribute(
+    "aT",
+    new BufferAttribute(new Float32Array(tValues), 1),
+  );
+  geometry.setAttribute(
+    "aSide",
+    new BufferAttribute(new Float32Array(sideValues), 1),
+  );
+  geometry.setAttribute(
+    "aAlong",
+    new BufferAttribute(new Float32Array(alongValues), 1),
+  );
+  geometry.setIndex(indices);
+
+  return geometry;
 }
 
 export class ShaderRenderer {
   private readonly renderer: WebGLRenderer;
   private readonly scene = new Scene();
-  private readonly camera = new PerspectiveCamera(38, 1, 0.1, 100);
-  private readonly root = new Group();
-  private activePreset: ShaderPresetId;
+  private readonly camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  private readonly geometry = createRibbonGeometry();
+  private readonly material: ShaderMaterial;
+  private readonly uniforms: ShaderUniforms;
   private controls: ShaderControls;
-  private uniforms: ShaderUniforms[] = [];
-  private geometrySignature = "";
 
-  constructor(
-    canvas: HTMLCanvasElement,
-    preset: ShaderPresetId,
-    controls: ShaderControls,
-  ) {
+  constructor(canvas: HTMLCanvasElement, controls: ShaderControls) {
     this.renderer = new WebGLRenderer({
       canvas,
-      antialias: true,
       alpha: false,
+      antialias: true,
       powerPreference: "high-performance",
     });
     this.renderer.outputColorSpace = "srgb";
     this.scene.background = new Color(0x050505);
-    this.camera.position.set(0, 0.15, 6);
-    this.scene.add(this.root);
-    this.activePreset = preset;
+    this.uniforms = this.createUniforms();
+    this.material = new ShaderMaterial({
+      depthTest: false,
+      depthWrite: false,
+      side: DoubleSide,
+      fragmentShader: ribbonFragmentShader,
+      transparent: false,
+      uniforms: this.uniforms,
+      vertexShader: ribbonVertexShader,
+    });
+
+    const ribbon = new Mesh(this.geometry, this.material);
+    ribbon.frustumCulled = false;
+    this.scene.add(ribbon);
     this.controls = controls;
-    this.buildPreset();
+    this.setControls(controls);
   }
 
-  setPreset(preset: ShaderPresetId, controls: ShaderControls) {
+  setControls(controls: ShaderControls) {
     this.controls = controls;
-
-    if (preset !== this.activePreset) {
-      this.activePreset = preset;
-      this.geometrySignature = "";
-      this.buildPreset();
-      return;
-    }
-
-    this.updateControls(controls);
+    this.uniforms.uScale.value = normalize(controls.scale);
+    this.uniforms.uStretch.value = normalize(controls.stretch);
+    this.uniforms.uWarp.value = normalize(controls.warp);
+    this.uniforms.uDetail.value = normalize(controls.detail);
+    this.uniforms.uSoftness.value = normalize(controls.softness);
+    this.uniforms.uRotationX.value = controls.rotationX * (Math.PI / 180);
+    this.uniforms.uRotationY.value = controls.rotationY * (Math.PI / 180);
+    this.uniforms.uRotationZ.value = controls.rotationZ * (Math.PI / 180);
+    this.uniforms.uMotionAmount.value = normalize(controls.motionAmount);
+    this.uniforms.uFlow.value = normalize(controls.flow);
+    this.uniforms.uDrift.value = normalize(controls.drift);
+    this.uniforms.uOpacity.value = normalize(controls.opacity);
+    this.uniforms.uGrain.value = normalize(controls.grain) * 0.055;
+    this.uniforms.uGlow.value = normalize(controls.glow);
+    this.uniforms.uBlur.value = normalize(controls.blur);
   }
 
   resize(width: number, height: number, pixelRatio: number) {
     const safeWidth = Math.max(1, Math.floor(width));
     const safeHeight = Math.max(1, Math.floor(height));
 
-    this.camera.aspect = safeWidth / safeHeight;
-    this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(pixelRatio);
     this.renderer.setSize(safeWidth, safeHeight, false);
+    this.uniforms.uResolution.value.set(
+      safeWidth * pixelRatio,
+      safeHeight * pixelRatio,
+    );
   }
 
   render(phase: number) {
     const normalizedPhase = ((phase % 1) + 1) % 1;
     const speedCycles = Math.round(this.controls.speed / 2);
-    const drift = normalize(this.controls.drift);
-    const motion = normalize(this.controls.motionAmount);
 
-    this.uniforms.forEach((uniforms) => {
-      uniforms.uPhase.value = normalizedPhase * Math.max(1, speedCycles);
-    });
-
-    this.root.rotation.y = normalizedPhase * Math.PI * 2 * speedCycles;
-    this.root.rotation.x =
-      Math.sin(normalizedPhase * Math.PI * 2) * drift * 0.18;
-    this.root.position.x =
-      Math.sin(normalizedPhase * Math.PI * 2) * drift * motion * 0.25;
-    this.root.position.y =
-      Math.cos(normalizedPhase * Math.PI * 2) * drift * motion * 0.12;
+    this.uniforms.uPhase.value =
+      speedCycles === 0 ? 0 : normalizedPhase * speedCycles * Math.PI * 2;
     this.renderer.render(this.scene, this.camera);
   }
 
   dispose() {
-    disposeObject(this.root);
+    this.geometry.dispose();
+    this.material.dispose();
     this.renderer.dispose();
   }
 
-  private buildPreset() {
-    disposeObject(this.root);
-    this.root.clear();
-    this.uniforms = [];
-
-    if (this.activePreset === "coil") {
-      this.buildCoil();
-    } else {
-      this.buildSaturn();
-    }
-
-    this.updateControls(this.controls);
-  }
-
-  private buildCoil() {
-    const turns = 1.7 + this.controls.detail * 0.24;
-    const height = 1.4 + this.controls.stretch * 0.22;
-    const radius = 0.1 + this.controls.softness * 0.018;
-    const curve = new HelixCurve(turns, height);
-    const geometry = new TubeGeometry(curve, 220, radius, 24, false);
-    const uniforms = this.createFormUniforms();
-    const material = new ShaderMaterial({
-      fragmentShader: formFragmentShader,
-      transparent: true,
-      uniforms,
-      vertexShader: formVertexShader,
-    });
-    const mesh = new Mesh(geometry, material);
-
-    mesh.rotation.z = -0.2;
-    this.root.add(mesh);
-    this.uniforms.push(uniforms);
-    this.geometrySignature = this.getGeometrySignature(this.controls);
-  }
-
-  private buildSaturn() {
-    const sphereUniforms = this.createFormUniforms();
-    const sphereMaterial = new ShaderMaterial({
-      fragmentShader: formFragmentShader,
-      transparent: true,
-      uniforms: sphereUniforms,
-      vertexShader: formVertexShader,
-    });
-    const sphere = new Mesh(
-      new SphereGeometry(0.82, 96, 64),
-      sphereMaterial,
-    );
-    const ringUniforms = this.createRingUniforms();
-    const ringMaterial = new ShaderMaterial({
-      depthWrite: false,
-      fragmentShader: ringFragmentShader,
-      side: DoubleSide,
-      transparent: true,
-      uniforms: ringUniforms,
-      vertexShader: ringVertexShader,
-    });
-    const rings = new Mesh(new RingGeometry(1.2, 2.38, 320, 1), ringMaterial);
-
-    sphere.scale.y = 0.78 + normalize(this.controls.stretch) * 0.35;
-    rings.rotation.x = 1.12;
-    rings.rotation.y = -0.12;
-    this.root.rotation.z = -0.28;
-    this.root.add(sphere, rings);
-    this.uniforms.push(sphereUniforms, ringUniforms);
-    this.geometrySignature = this.getGeometrySignature(this.controls);
-  }
-
-  private updateControls(controls: ShaderControls) {
-    const nextSignature = this.getGeometrySignature(controls);
-    this.controls = controls;
-
-    if (
-      this.activePreset === "coil" &&
-      this.geometrySignature !== nextSignature
-    ) {
-      this.buildPreset();
-      return;
-    }
-
-    const scale = 0.72 + normalize(controls.scale) * 0.52;
-    this.root.scale.setScalar(scale);
-
-    this.uniforms.forEach((uniforms) => {
-      uniforms.uWarp.value = normalize(controls.warp) * 0.11;
-      uniforms.uMotionAmount.value = normalize(controls.motionAmount);
-      uniforms.uFlow.value = controls.flow;
-      uniforms.uOpacity.value = normalize(controls.opacity);
-      uniforms.uGrain.value = normalize(controls.grain) * 0.12;
-      uniforms.uGlow.value = normalize(controls.glow) * 0.42;
-      uniforms.uBlur.value = normalize(controls.blur);
-
-      if (uniforms.uDetail) {
-        uniforms.uDetail.value = controls.detail;
-      }
-
-      if (uniforms.uSoftness) {
-        uniforms.uSoftness.value = normalize(controls.softness);
-      }
-    });
-
-    if (this.activePreset === "saturn") {
-      const sphere = this.root.children[0];
-      sphere.scale.y = 0.78 + normalize(controls.stretch) * 0.35;
-    }
-  }
-
-  private createFormUniforms(): ShaderUniforms {
+  private createUniforms(): ShaderUniforms {
     return {
-      uColor: { value: new Color(0xe7e1c8) },
       uBlur: { value: 0 },
+      uColor: { value: new Color(0xe8e3cc) },
+      uDetail: { value: 0 },
+      uDrift: { value: 0 },
       uFlow: { value: 0 },
       uGlow: { value: 0 },
       uGrain: { value: 0 },
       uMotionAmount: { value: 0 },
       uOpacity: { value: 1 },
       uPhase: { value: 0 },
+      uResolution: { value: new Vector2(1, 1) },
+      uRotationX: { value: 0 },
+      uRotationY: { value: 0 },
+      uRotationZ: { value: 0 },
+      uScale: { value: 0 },
+      uSoftness: { value: 0 },
+      uStretch: { value: 0 },
       uWarp: { value: 0 },
     };
-  }
-
-  private createRingUniforms(): ShaderUniforms {
-    return {
-      ...this.createFormUniforms(),
-      uDetail: { value: 0 },
-      uSoftness: { value: 0 },
-    };
-  }
-
-  private getGeometrySignature(controls: ShaderControls) {
-    return `${controls.detail}:${controls.stretch}:${controls.softness}`;
   }
 }

@@ -1,4 +1,4 @@
-export { shaderControlSections, shaderPresets } from "./model/presets";
+export { shaderControlSections, shaderDefaults } from "./model/presets";
 export {
   getShaderEditorSnapshot,
   useShaderEditorStore,
@@ -7,6 +7,4 @@ export type {
   ShaderControlKey,
   ShaderControlSectionId,
   ShaderControls,
-  ShaderPresetDefinition,
-  ShaderPresetId,
 } from "./model/types";
