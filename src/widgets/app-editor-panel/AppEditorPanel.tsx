@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Blend, Box, Move3D } from "lucide-react";
 import { EditorPanelSlider } from "@/features/editor-panel";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type EditorControl = {
   label: string;
@@ -66,26 +67,30 @@ export function AppEditorPanel() {
   return (
     <aside
       aria-label="Editor controls"
-      className="absolute right-0 top-0 z-20 flex h-[min(1127.44px,calc(100vh-16px))] w-[min(474px,calc(100vw-32px))] flex-col items-start gap-4 overflow-y-auto rounded-[31.7588px] bg-[#191919]/[0.71] p-[18px] text-white shadow-[0_4px_16px_rgba(59,59,59,0.5)] backdrop-blur-md"
+      className="absolute inset-x-3 top-3 z-20 flex max-h-[calc(100svh-24px)] overflow-hidden rounded-[22px] bg-card/80 text-card-foreground backdrop-blur-md sm:left-auto sm:right-4 sm:top-4 sm:max-h-[calc(100svh-32px)] sm:w-[min(340px,calc(100vw-32px))] sm:rounded-[24px]"
     >
-      {sections.map(({ title, Icon, controls }) => (
-        <section className="w-full space-y-2" key={title}>
-          <div className="flex items-center gap-2 text-white/75">
-            <Icon className="size-4" strokeWidth={1.8} />
-            <h2 className="text-[15px] font-medium leading-none">{title}</h2>
-          </div>
-          <div className="space-y-3">
-            {controls.map((control) => (
-              <EditorPanelSlider
-                key={control.label}
-                label={control.label}
-                onChange={(value) => updateValue(control.label, value)}
-                value={values[control.label]}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+      <ScrollArea className="h-full w-full">
+        <div className="flex flex-col gap-3 p-3.5">
+          {sections.map(({ title, Icon, controls }) => (
+            <section className="flex w-full flex-col gap-2" key={title}>
+              <div className="flex min-h-8 items-center gap-1.5 text-muted-foreground">
+                <Icon className="size-3.5" strokeWidth={1.8} />
+                <h2 className="text-[13px] font-medium leading-none">{title}</h2>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {controls.map((control) => (
+                  <EditorPanelSlider
+                    key={control.label}
+                    label={control.label}
+                    onChange={(value) => updateValue(control.label, value)}
+                    value={values[control.label]}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </ScrollArea>
     </aside>
   );
 }

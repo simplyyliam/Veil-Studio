@@ -30,26 +30,25 @@ export function EditorPanelSlider({
   return (
     <label
       className={cn(
-        "group relative block h-9 w-full cursor-ew-resize select-none rounded-[9px] bg-white/[0.035]",
-        "shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
+        "group relative block h-11 w-full cursor-ew-resize select-none rounded-[10px] bg-muted/40 sm:h-8 sm:rounded-[8px]",
         className,
       )}
     >
       <span
-        className="absolute inset-y-0 left-0 rounded-[9px] bg-[#737373] transition-[width,background-color] duration-150 ease-out group-hover:bg-[#858585]"
+        className="absolute inset-y-0 left-0 rounded-[10px] bg-primary/35 transition-[width,background-color] duration-150 ease-out group-hover:bg-primary/45 sm:rounded-[8px]"
         style={{ width: `${progress}%` }}
       />
       <span className="pointer-events-none absolute inset-0 flex items-center justify-between px-3">
-        <span className="text-[13px] font-medium leading-none text-white/55">
+        <span className="text-[12px] font-medium leading-none text-muted-foreground">
           {label}
         </span>
-        <span className="font-mono text-[12px] leading-none text-white/50 tabular-nums">
+        <span className="font-mono text-[11px] leading-none text-muted-foreground tabular-nums">
           {clampedValue}
         </span>
       </span>
       <input
         aria-label={label}
-        className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0"
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         max={max}
         min={min}
         onChange={handleChange}
