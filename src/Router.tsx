@@ -1,7 +1,7 @@
 import { createBrowserRouter, type RouteObject } from "react-router-dom";
 import type { ComponentType } from "react";
 import { AppLayout } from "./pages/app";
-import { StandaloneLayout } from "./pages/app/layout";
+import StandaloneLayout from "./pages/standalone/layout/StandaloneLayout";
 type PageModule = {
   default: ComponentType;
 };
@@ -19,7 +19,7 @@ for (const [path, module] of Object.entries(pages)) {
   const page = module as PageModule;
   const Component = page.default;
 
-  // 1. Convert file path → route
+  // 1. Convert file path to route
   let routePath = path
     .replace("./pages", "")
     .replace("/page.tsx", "");
@@ -33,12 +33,14 @@ for (const [path, module] of Object.entries(pages)) {
 
   const normalizePath = routePath.length === 0 ? "/" : routePath;
 
-  // 2. dashboard becomes the index route inside AppLayout
-  const isIndexRoute = !isStandalone && normalizePath === "/dashboard";
+  // 2. Preview is the default route inside AppLayout, while remaining available at /preview.
+  const isDefaultAppRoute = !isStandalone && normalizePath === "/preview";
 
-  const route: RouteObject = isIndexRoute
-    ? { index: true, element: <Component /> }
-    : { path: normalizePath, element: <Component /> };
+  if (isDefaultAppRoute) {
+    appRoutes.push({ index: true, element: <Component /> });
+  }
+
+  const route: RouteObject = { path: normalizePath, element: <Component /> };
 
   // 3. Classification
   if (isStandalone) {
@@ -56,6 +58,6 @@ export const Router = createBrowserRouter([
   },
   {
     element: <StandaloneLayout />,
-    children: standaloneRoutes
+    children: standaloneRoutes,
   }
 ]);
